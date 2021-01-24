@@ -4,6 +4,7 @@ import os
 import matplotlib.image
 import numpy as np
 import cv2
+import torch
 
 
 class KeypointDataset(Dataset):
@@ -74,3 +75,39 @@ class Rescale(object):
         # Scale the key points to match resized image
         keypoints = keypoints * [new_width / width, new_height / height]
         return {'image': image, 'keypoints': keypoints}
+
+
+class RandomCrop(object):
+    """ Randomly crop image in a sample, if given int, square crop is made otherwise tuple """
+    def __init__(self, output_size):
+        assert isinstance(output_size, (int, tuple))
+        if isinstance(output_size, int):
+            self.output_size = (output_size, output_size)
+        else:
+            assert len(output_size) == 2
+            self.output_size = output_size
+
+    def __call__(self, sample):
+        image, keypoints = sample['image'], sample['keypoints']
+        height, width = image.shape[:2]
+        new_height, new_width = self.output_size
+        # Get random positions in height and width with given crop size
+        top = np.random.randint(0, height - new_height)
+        left = np.random.randint(0, width - new_width)
+        # Crop image
+        image = image[top: top + new_height, left: left + new_width]
+        # Scale key points
+        keypoints = keypoints - [left, top]
+        return {'image': image, 'keypoints': keypoints}
+
+
+class ToTensor(object):
+    """ Convert image and key points numpy arrays to Tensors. """
+    def __call__(self, sample):
+        image, keypoints = sample['image'], sample['keypoints']
+        # If image has no grayscale channel, add it
+        if len(image.shape) == 2:
+            image = image.reshape(image.shape[0], image.shape[1], 1)
+        # Reshape color dimensions to torch Tensor: [channel, height, width]
+        image = image.transpose((2, 0, 1))
+        return {'image': torch.from_numpy(image), 'keypoints': torch.from_numpy(keypoints)}
