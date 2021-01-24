@@ -3,6 +3,7 @@ import pandas as pd
 import os
 import matplotlib.image
 import numpy as np
+import cv2
 
 
 class KeypointDataset(Dataset):
@@ -35,3 +36,18 @@ class KeypointDataset(Dataset):
         if self.transform:
             sample = self.transform(sample)
         return sample
+
+
+class Normalize(object):
+    """ Convert image to grayscale and normalize the color range to [0,1] """
+    def __call__(self, sample):
+        image, keypoints = sample['image'], sample['keypoints']
+        image_copy = np.copy(image)
+        keypoints_copy = np.copy(keypoints)
+        # Convert to grayscale
+        image_copy = cv2.cvtColor(image_copy, cv2.COLOR_RGB2GRAY)
+        # Scale from [0, 255] to [0, 1]
+        image_copy = image_copy / 255.0
+        # Scale keypoints to be centered around 0 with a range [-1, 1]
+        keypoints_copy = (keypoints_copy - 100) / 50.0
+        return {'image': image_copy, 'keypoints': keypoints_copy}
