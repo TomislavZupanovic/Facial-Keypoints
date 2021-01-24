@@ -51,3 +51,26 @@ class Normalize(object):
         # Scale keypoints to be centered around 0 with a range [-1, 1]
         keypoints_copy = (keypoints_copy - 100) / 50.0
         return {'image': image_copy, 'keypoints': keypoints_copy}
+
+
+class Rescale(object):
+    """ Rescale image in a sample to a given size, if given int as input,
+        scales keeping the aspect ratio, simple resize if given tuple. """
+    def __init__(self, output_size):
+        assert isinstance(output_size, (int, tuple))
+        self.output_size = output_size
+
+    def __call__(self, sample):
+        image, keypoints = sample['image'], sample['keypoints']
+        height, width = image.shape[:2]
+        if isinstance(self.output_size, int):
+            if height > width:
+                new_height, new_width = self.output_size * height / width, width
+            else:
+                new_height, new_width = height, self.output_size * width / height
+        else:
+            new_height, new_width = self.output_size
+        image = cv2.resize(image, (int(new_height), int(new_width)))
+        # Scale the key points to match resized image
+        keypoints = keypoints * [new_width / width, new_height / height]
+        return {'image': image, 'keypoints': keypoints}
