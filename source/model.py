@@ -1,5 +1,7 @@
+import torch
 import torch.nn as nn
 import torch.nn.functional as f
+import torch.optim as optim
 
 
 class CNN(nn.Module):
@@ -24,6 +26,9 @@ class CNN(nn.Module):
         self.dropout = nn.Dropout(p=0.3)
         # Output 136, 2 for each 68 key point (x, y) pairs
         self.output = nn.Linear(512, 136)
+        """ Specify loss function and optimizer """
+        self.loss_function = nn.MSELoss()
+        self.optimizer = optim.Adam(params=self.parameters(), lr=0.001)
 
     def forward(self, x):
         """ Defines feed forward pass """
@@ -38,3 +43,27 @@ class CNN(nn.Module):
         x = self.dropout(x)
         x = self.output(x)
         return x
+
+    def fit(self, train_loader, epochs):
+        """ Trains the CNN on the training data with given number of epochs """
+        self.train()
+        for epoch in range(epochs):
+            running_loss = 0.0
+            for batch_num, data in enumerate(train_loader):
+                self.optimizer.zero_grad()
+                # Get images and their key points
+                images = data['image'].type(torch.FloatTensor)
+                keypoints = data['keypoints'].type(torch.FloatTensor)
+                # Flatten points
+                keypoints = keypoints.view(keypoints.size(0), -1)
+                output = self.forward(images)
+                loss = self.loss_function(output, keypoints)
+                # Calculate gradients
+                loss.backward()
+                # Perform back propagation
+                self.optimizer.step()
+                running_loss += loss.item()
+                if batch_num % 10 == 0:
+                    print(f'Epoch: {epoch+1}/{epochs}, Batch: {batch_num+1}, Avg. Loss: {running_loss / 10}')
+                    running_loss = 0.0
+        print('\nFinished Training!')
