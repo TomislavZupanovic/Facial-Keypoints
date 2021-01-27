@@ -1,4 +1,5 @@
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, DataLoader
+from torchvision.transforms import transforms
 import pandas as pd
 import os
 import matplotlib.image
@@ -8,16 +9,18 @@ import torch
 
 
 class KeypointDataset(Dataset):
-    def __init__(self, csv, root_dir, transform=None):
+    def __init__(self, csv_path, root_dir, transform=False):
         """
         Args:
             csv (string): Path to the csv file with annotations.
             root_dir (string): Directory with all the images.
             transform (optional): Optional transform to the sample.
         """
-        self.keypoints_frame = pd.read_csv(csv)
+        self.keypoints_frame = pd.read_csv(csv_path)
         self.root_dir = root_dir
-        self.transform = transform
+        self.transform_bool = transform
+        self.transform = transforms.Compose([Rescale(250), RandomCrop(224),
+                                             Normalize(), ToTensor()])
 
     def __len__(self):
         """ Return the size of CSV """
@@ -34,9 +37,15 @@ class KeypointDataset(Dataset):
         keypoints = self.keypoints_frame.iloc[index, 1].as_matrix()
         keypoints = keypoints.astype('float').reshape(-1, 2)
         sample = {'image': image, 'keypoints': keypoints}
-        if self.transform:
+        if self.transform_bool:
             sample = self.transform(sample)
         return sample
+
+    def get_dataloader(self, batch_size):
+        """ Uses PyTorch DataLoaders to load and shuffle data in batches for training model,
+            returns training or testing DataLoader """
+        data_loader = DataLoader(self, batch_size=batch_size, shuffle=True, num_workers=2)
+        return data_loader
 
 
 class Normalize(object):
