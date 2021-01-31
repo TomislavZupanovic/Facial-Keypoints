@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as f
 import torch.optim as optim
+import os
 
 
 class CNN(nn.Module):
@@ -46,6 +47,7 @@ class CNN(nn.Module):
 
     def fit(self, train_loader, epochs):
         """ Trains the CNN on the training data with given number of epochs """
+        print('\nStarting Training...\n')
         self.train()
         for epoch in range(epochs):
             running_loss = 0.0
@@ -67,3 +69,10 @@ class CNN(nn.Module):
                     print(f'Epoch: {epoch+1}/{epochs}, Batch: {batch_num+1}, Avg. Loss: {running_loss / 10}')
                     running_loss = 0.0
         print('\nFinished Training!')
+
+    def save_model(self):
+        """ Saves the model in directory """
+        directory = 'saved_models/'
+        num_of_files = len(os.listdir(directory))
+        model_name = f'Model-{num_of_files}.pt'
+        torch.save(self.state_dict(), directory+model_name)
