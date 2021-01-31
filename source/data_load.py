@@ -12,7 +12,7 @@ class KeypointDataset(Dataset):
     def __init__(self, csv_path, root_dir, transform=False):
         """
         Args:
-            csv (string): Path to the csv file with annotations.
+            csv_path (string): Path to the csv file with annotations.
             root_dir (string): Directory with all the images.
             transform (optional): Optional transform to the sample.
         """
@@ -34,7 +34,7 @@ class KeypointDataset(Dataset):
         # If image has alpha color channel (channel 4), remove it
         if image.shape[2] == 4:
             image = image[:, :, 0:3]
-        keypoints = self.keypoints_frame.iloc[index, 1].as_matrix()
+        keypoints = self.keypoints_frame.iloc[index, 1:].values
         keypoints = keypoints.astype('float').reshape(-1, 2)
         sample = {'image': image, 'keypoints': keypoints}
         if self.transform_bool:
@@ -44,8 +44,17 @@ class KeypointDataset(Dataset):
     def get_dataloader(self, batch_size):
         """ Uses PyTorch DataLoaders to load and shuffle data in batches for training model,
             returns training or testing DataLoader """
-        data_loader = DataLoader(self, batch_size=batch_size, shuffle=True, num_workers=2)
+        data_loader = DataLoader(self, batch_size=batch_size, shuffle=True)
         return data_loader
+
+    def check_data(self):
+        """ Checks for proper data format """
+        data_size = len(self)
+        sample = self[np.random.randint(0, data_size - 1)]
+        image_size, keypoint_size = sample['image'].size(), sample['keypoints'].size()
+        assert image_size == (1, 224, 224), 'Image size or channel is not as expected.'
+        assert keypoint_size == (68, 2), 'Keypoints size is not as expected.'
+        print('Image and keypoint sizes are correct.')
 
 
 class Normalize(object):
@@ -75,9 +84,9 @@ class Rescale(object):
         height, width = image.shape[:2]
         if isinstance(self.output_size, int):
             if height > width:
-                new_height, new_width = self.output_size * height / width, width
+                new_height, new_width = self.output_size * height / width, self.output_size
             else:
-                new_height, new_width = height, self.output_size * width / height
+                new_height, new_width = self.output_size, self.output_size * width / height
         else:
             new_height, new_width = self.output_size
         image = cv2.resize(image, (int(new_height), int(new_width)))
