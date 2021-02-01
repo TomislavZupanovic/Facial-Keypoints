@@ -76,3 +76,13 @@ class CNN(nn.Module):
         num_of_files = len(os.listdir(directory))
         model_name = f'Model-{num_of_files}.pt'
         torch.save(self.state_dict(), directory+model_name)
+
+    def check_predict(self, data_loader):
+        """ Predicts key points on sample of given data loader"""
+        sample = next(iter(data_loader))
+        images, keypoints = sample['image'], sample['keypoints']
+        images = images.type(torch.FloatTensor)
+        pred_keypoints = self.forward(images)
+        # Reshape to batch_size x 68 x 2
+        pred_keypoints = pred_keypoints.view(pred_keypoints.size()[0], 68, 2)
+        return images, pred_keypoints, keypoints
