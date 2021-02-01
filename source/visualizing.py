@@ -10,15 +10,14 @@ class Visualizer:
 
     def data_sample(self):
         """ Shows sample images of data set """
-        # TODO: Fix plt.imshow()
+        figure, ax = plt.subplots(1, 4, figsize=(15, 6))
+        figure.suptitle('Data sample images with key points', fontsize=15)
         for i in range(4):
-            figure = plt.figure(figsize=(10, 5))
             random_num = np.random.randint(0, len(self.data))
             sample = self.data[random_num]
-            axis = plt.subplot(4, 1, i+1)
             image, keypoints = sample['image'], sample['keypoints']
-            plt.imshow(image)
-            plt.scatter(keypoints[:, 0], keypoints[:, 1], s=25, marker='.', c='yellow')
-            figure.axes('off')
-            plt.show()
+            ax[i].imshow(image)
+            ax[i].scatter(keypoints[:, 0], keypoints[:, 1], s=5, marker='.', c='yellow')
+            ax[i].axis('off')
+        plt.show()
 

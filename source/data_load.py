@@ -49,12 +49,15 @@ class KeypointDataset(Dataset):
 
     def check_data(self):
         """ Checks for proper data format """
-        data_size = len(self)
-        sample = self[np.random.randint(0, data_size - 1)]
-        image_size, keypoint_size = sample['image'].size(), sample['keypoints'].size()
-        assert image_size == (1, 224, 224), 'Image size or channel is not as expected.'
-        assert keypoint_size == (68, 2), 'Keypoints size is not as expected.'
-        print('Image and keypoint sizes are correct.')
+        if self.transform_bool:
+            data_size = len(self)
+            sample = self[np.random.randint(0, data_size - 1)]
+            image_size, keypoint_size = sample['image'].size(), sample['keypoints'].size()
+            assert image_size == (1, 224, 224), 'Image size or channel is not as expected.'
+            assert keypoint_size == (68, 2), 'Keypoints size is not as expected.'
+            print('Image and keypoint sizes are correct.')
+        else:
+            print('Check data only when applying transformations.')
 
 
 class Normalize(object):
