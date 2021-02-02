@@ -94,7 +94,7 @@ class Rescale(object):
             new_height, new_width = self.output_size
         image = cv2.resize(image, (int(new_height), int(new_width)))
         # Scale the key points to match resized image
-        keypoints = keypoints * [new_width / width, new_height / height]
+        keypoints = keypoints * [int(new_width) / width, int(new_height) / height]
         return {'image': image, 'keypoints': keypoints}
 
 
