@@ -19,7 +19,7 @@ class KeypointDataset(Dataset):
         self.keypoints_frame = pd.read_csv(csv_path)
         self.root_dir = root_dir
         self.transform_bool = transform
-        self.transform = transforms.Compose([Rescale(250), RandomCrop(224),
+        self.transform = transforms.Compose([Rescale(256), RandomCrop(224),
                                              Normalize(), ToTensor()])
 
     def __len__(self):
@@ -92,7 +92,7 @@ class Rescale(object):
                 new_height, new_width = self.output_size, self.output_size * width / height
         else:
             new_height, new_width = self.output_size
-        image = cv2.resize(image, (int(new_height), int(new_width)))
+        image = cv2.resize(image, (int(new_width), int(new_height)))
         # Scale the key points to match resized image
         keypoints = keypoints * [int(new_width) / width, int(new_height) / height]
         return {'image': image, 'keypoints': keypoints}

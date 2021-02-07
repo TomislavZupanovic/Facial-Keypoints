@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as f
 import torch.optim as optim
+import cv2
 import os
 
 
@@ -86,3 +87,9 @@ class CNN(nn.Module):
         # Reshape to batch_size x 68 x 2
         pred_keypoints = pred_keypoints.view(pred_keypoints.size()[0], 68, -1)
         return images, pred_keypoints, keypoints
+
+
+class Detector(object):
+    def __init__(self, cnn_version=None):
+        self.face_detector = cv2.CascadeClassifier('saved_models/face_detector/haarcascade_frontalface_default.xml')
+        # TODO
