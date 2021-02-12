@@ -78,6 +78,18 @@ class CNN(nn.Module):
         model_name = f'Model-{num_of_files}.pt'
         torch.save(self.state_dict(), directory+model_name)
 
+    def load_model(self, model_num=None):
+        """ Load the saved model from directory, if model number not specified,
+            loads the last one trained """
+        directory = 'saved_models/'
+        if model_num is None:
+            num = len(os.listdir(directory))
+            model_name = f'Model-{num}.pt'
+        else:
+            model_name = f'Model-{model_num}.pt'
+        self.load_state_dict(torch.load(directory + model_name))
+        self.eval()
+
     def check_predict(self, data_loader):
         """ Predicts key points on sample of given data loader """
         sample = next(iter(data_loader))
@@ -92,4 +104,5 @@ class CNN(nn.Module):
 class Detector(object):
     def __init__(self, cnn_version=None):
         self.face_detector = cv2.CascadeClassifier('saved_models/face_detector/haarcascade_frontalface_default.xml')
-        # TODO
+        self.keypoint_detector = CNN()
+        self.keypoint_detector.load_model(model_num=cnn_version)
