@@ -3,6 +3,8 @@ import torch.nn as nn
 import torch.nn.functional as f
 import torch.optim as optim
 import cv2
+import matplotlib.pyplot as plt
+import numpy as np
 import os
 
 
@@ -102,7 +104,46 @@ class CNN(nn.Module):
 
 
 class Detector(object):
+    """ Combines Haar Cascade as face detector and CNN as key point detector """
     def __init__(self, cnn_version=None):
         self.face_detector = cv2.CascadeClassifier('saved_models/face_detector/haarcascade_frontalface_default.xml')
         self.keypoint_detector = CNN()
         self.keypoint_detector.load_model(model_num=cnn_version)
+
+    @staticmethod
+    def transform_roi(roi):
+        """ Transform faces as key point detector input """
+        gray = cv2.cvtColor(roi, cv2.COLOR_RGB2GRAY)
+        resized = cv2.resize(gray, (224, 224)) / 255.0
+        reshaped = resized.reshape(resized.shape[0], resized.shape[1], 1)
+        reshaped = reshaped.transpose((2, 0, 1))
+        # Convert to Float Tensor
+        torch_img = torch.from_numpy(reshaped).type(torch.FloatTensor)
+        # Add batch size of 1
+        tensor = torch.unsqueeze(torch_img, 0)
+        return tensor
+
+    def predict(self, image):
+        """ Predicts faces and facial key points from given image """
+        scale_percent = 80  # percent of original size
+        width = int(image.shape[1] * scale_percent / 100)
+        height = int(image.shape[0] * scale_percent / 100)
+        dim = (width, height)
+        # resize image
+        image = cv2.resize(image, dim, interpolation=cv2.INTER_AREA)
+        image_copy = image.copy()
+        faces = self.face_detector.detectMultiScale(image, 1.2, 2)
+        for (x, y, w, h) in faces:
+            roi = image[y: y+h+20, x: x+w+20]
+            model_input = self.transform_roi(roi)
+            prediction = self.keypoint_detector.forward(model_input)
+            predictions = prediction.view(prediction.size()[0], 68, -1)
+            key_points = predictions[0].data.numpy()
+            key_points = key_points * 50.0 + 100
+            roi_resized = cv2.resize(roi, (224, 224))
+            for dot in range(key_points.shape[0]):
+                cv2.circle(roi_resized, (key_points[dot, 0], key_points[dot, 1]), 1, (0, 255, 0), -1, cv2.LINE_AA)
+            roi_orig = cv2.resize(roi_resized, (roi.shape[1], roi.shape[0]))
+            image_copy[y: y+h+20, x: x+w+20] = roi_orig
+        cv2.imshow('Key points prediction', image_copy)
+        cv2.waitKey()
