@@ -3,8 +3,6 @@ import torch.nn as nn
 import torch.nn.functional as f
 import torch.optim as optim
 import cv2
-import matplotlib.pyplot as plt
-import numpy as np
 import os
 
 
@@ -83,7 +81,7 @@ class CNN(nn.Module):
     def load_model(self, model_num=None):
         """ Load the saved model from directory, if model number not specified,
             loads the last one trained """
-        directory = 'saved_models/'
+        directory = 'source/saved_models/'
         if model_num is None:
             num = len(os.listdir(directory))
             model_name = f'Model-{num}.pt'
@@ -106,7 +104,7 @@ class CNN(nn.Module):
 class Detector(object):
     """ Combines Haar Cascade as face detector and CNN as key point detector """
     def __init__(self, cnn_version=None):
-        self.face_detector = cv2.CascadeClassifier('saved_models/face_detector/haarcascade_frontalface_default.xml')
+        self.face_detector = cv2.CascadeClassifier('source/saved_models/face_detector/haarcascade_frontalface_default.xml')
         self.keypoint_detector = CNN()
         self.keypoint_detector.load_model(model_num=cnn_version)
 
@@ -123,14 +121,15 @@ class Detector(object):
         tensor = torch.unsqueeze(torch_img, 0)
         return tensor
 
-    def predict(self, image):
+    def image_predict(self, image, scale=False):
         """ Predicts faces and facial key points from given image """
-        scale_percent = 80  # percent of original size
-        width = int(image.shape[1] * scale_percent / 100)
-        height = int(image.shape[0] * scale_percent / 100)
-        dim = (width, height)
-        # resize image
-        image = cv2.resize(image, dim, interpolation=cv2.INTER_AREA)
+        if scale:
+            scale_percent = 80  # percent of original size
+            width = int(image.shape[1] * scale_percent / 100)
+            height = int(image.shape[0] * scale_percent / 100)
+            dim = (width, height)
+            # resize image
+            image = cv2.resize(image, dim, interpolation=cv2.INTER_AREA)
         image_copy = image.copy()
         faces = self.face_detector.detectMultiScale(image, 1.2, 2)
         for (x, y, w, h) in faces:
@@ -146,4 +145,17 @@ class Detector(object):
             roi_orig = cv2.resize(roi_resized, (roi.shape[1], roi.shape[0]))
             image_copy[y: y+h+20, x: x+w+20] = roi_orig
         cv2.imshow('Key points prediction', image_copy)
-        cv2.waitKey()
+        # cv2.waitKey()
+
+    def webcam_predict(self, frame, frame_width, frame_height):
+        image = cv2.resize(frame, (224, 224))
+        original = image.copy()
+        tensor = self.transform_roi(image)
+        prediction = self.keypoint_detector.forward(tensor)
+        predictions = prediction.view(prediction.size()[0], 68, -1)
+        key_points = predictions[0].data.numpy()
+        key_points = key_points * 50.0 + 100
+        for dot in range(key_points.shape[0]):
+            cv2.circle(original, (key_points[dot, 0], key_points[dot, 1]), 1, (0, 255, 0), -1, cv2.LINE_AA)
+        original = cv2.resize(original, (frame_width, frame_height))
+        cv2.imshow('Keypoints prediction', original)
